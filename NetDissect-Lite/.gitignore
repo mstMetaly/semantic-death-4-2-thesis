@@ -1,0 +1,8 @@
+# Dataset folder
+dataset/
+
+# Model zoo folder
+zoo/
+
+#result folder
+result/

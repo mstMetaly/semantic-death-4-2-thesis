@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: NetDissect Debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/NetDissect-Lite/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/NetDissect-Lite"
+            },
+            "stopOnEntry": false
+        },
+        {
+            "name": "Python: Debug Score Calculation",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/NetDissect-Lite/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/NetDissect-Lite"
+            },
+            "stopOnEntry": false
+        }
+    ]
+}
+

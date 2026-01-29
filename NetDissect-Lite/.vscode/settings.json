@@ -1,0 +1,10 @@
+{
+    "python.defaultInterpreterPath": "python",
+    "python.debugging.enabled": true,
+    "python.debugging.autoReload": {
+        "enable": true
+    },
+    "debug.allowBreakpointsEverywhere": true,
+    "python.terminal.activateEnvironment": true
+}
+
