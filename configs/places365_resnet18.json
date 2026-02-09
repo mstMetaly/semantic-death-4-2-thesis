@@ -1,0 +1,53 @@
+{
+  "environment": "dev",
+  "run_name": "places365_resnet18",
+  "data": {
+    "dataset_root": "data/places365",
+    "train_split": "train-standard",
+    "val_split": "val",
+    "small": true,
+    "num_workers": 4,
+    "max_train_samples": 20000,
+    "seed": 42
+  },
+  "training": {
+    "epochs": 5,
+    "batch_size": 32,
+    "lr": 0.01,
+    "momentum": 0.9,
+    "weight_decay": 0.0001,
+    "step_size": 30,
+    "gamma": 0.1,
+    "pretrained": true,
+    "device": "auto",
+    "save_every": 1
+  },
+  "tracking": {
+    "tau": 0.04,
+    "k": 3,
+    "min_alive_epochs": 1,
+    "smoothing_window": 1,
+    "layers": [
+      "layer4"
+    ]
+  },
+  "migration": {
+    "window": 3,
+    "min_delta": 0.01
+  },
+  "functional_death": {
+    "enabled": false,
+    "max_samples": 128,
+    "batch_size": 16,
+    "threshold": 0.0001
+  },
+  "plots": {
+    "top_concepts": 20,
+    "dpi": 160
+  },
+  "netdissect": {
+    "root": "ND-ON-SD/NetDissect-Lite",
+    "settings_module": "settings",
+    "python": "python"
+  }
+}
