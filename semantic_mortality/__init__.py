@@ -1,0 +1,1 @@
+"""Semantic mortality pipeline modules."""
