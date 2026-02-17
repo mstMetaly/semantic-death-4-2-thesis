@@ -2,6 +2,7 @@ import settings
 import torch
 import torchvision
 import os
+from collections import OrderedDict
 
 def loadmodel(hook_fn):
     if settings.MODEL_FILE is None:
@@ -18,7 +19,7 @@ def loadmodel(hook_fn):
         checkpoint = torch.load(settings.MODEL_FILE, map_location='cpu')
         
         # Handle different checkpoint formats
-        if isinstance(checkpoint, (dict, type(torch._C.OrderedDict()))):
+        if isinstance(checkpoint, (dict, OrderedDict)):
             model = torchvision.models.__dict__[settings.MODEL](num_classes=settings.NUM_CLASSES)
             
             # Check if checkpoint contains 'state_dict' key (common PyTorch training format)
@@ -37,6 +38,13 @@ def loadmodel(hook_fn):
             if settings.MODEL_PARALLEL or any(k.startswith('module.') for k in state_dict.keys()):
                 state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
                 print("Removed 'module.' prefix from state_dict keys")
+
+            # Drop classifier weights if they do not match (e.g., 365 vs 1000)
+            if hasattr(model, "fc") and "fc.weight" in state_dict:
+                if state_dict["fc.weight"].shape != model.fc.weight.shape:
+                    state_dict.pop("fc.weight", None)
+                    state_dict.pop("fc.bias", None)
+                    print("Removed mismatched fc.* weights from state_dict")
             
             # Load state dict with error handling
             try:
@@ -44,7 +52,7 @@ def loadmodel(hook_fn):
                 print("Checkpoint loaded successfully (strict=False)")
             except Exception as e:
                 print(f"Warning: Error loading state_dict: {e}")
-                print("Attempting to load with strict=False...")
+                print("Attempting to load with strict=False after cleanup...")
                 model.load_state_dict(state_dict, strict=False)
         else:
             # Checkpoint is the model itself

@@ -47,18 +47,19 @@ def _build_dataloaders(
         ]
     )
 
+    download = data_cfg.get("download", False)
     train_dataset = torchvision.datasets.Places365(
         root=data_cfg["dataset_root"],
         split=data_cfg["train_split"],
         small=data_cfg["small"],
-        download=False,
+        download=download,
         transform=train_tf,
     )
     val_dataset = torchvision.datasets.Places365(
         root=data_cfg["dataset_root"],
         split=data_cfg["val_split"],
         small=data_cfg["small"],
-        download=False,
+        download=download,
         transform=val_tf,
     )
 
