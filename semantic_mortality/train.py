@@ -142,6 +142,10 @@ def train_and_checkpoint(config: Config, paths: RunPaths) -> None:
         gamma=config.training["gamma"],
     )
 
+    save_every_epochs = int(config.training.get("save_every", 1))
+    save_every_iters = int(config.training.get("save_every_iters", 0))
+    global_step = 0
+
     with paths.metrics_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
@@ -167,6 +171,21 @@ def train_and_checkpoint(config: Config, paths: RunPaths) -> None:
                 preds = outputs.argmax(dim=1)
                 correct += (preds == labels).sum().item()
                 total += labels.size(0)
+                global_step += 1
+
+                if save_every_iters > 0 and global_step % save_every_iters == 0:
+                    ckpt_path = paths.checkpoints_dir / f"iter_{global_step}.pt"
+                    torch.save(
+                        {
+                            "epoch": epoch,
+                            "global_step": global_step,
+                            "state_dict": model.state_dict(),
+                            "optimizer": optimizer.state_dict(),
+                            "train_loss": loss.item(),
+                            "train_acc": correct / max(total, 1),
+                        },
+                        ckpt_path,
+                    )
 
             train_loss = running_loss / max(total, 1)
             train_acc = correct / max(total, 1)
@@ -185,11 +204,12 @@ def train_and_checkpoint(config: Config, paths: RunPaths) -> None:
             )
             f.flush()
 
-            if epoch % config.training["save_every"] == 0:
+            if save_every_epochs > 0 and epoch % save_every_epochs == 0:
                 ckpt_path = paths.checkpoints_dir / f"epoch_{epoch}.pt"
                 torch.save(
                     {
                         "epoch": epoch,
+                        "global_step": global_step,
                         "state_dict": model.state_dict(),
                         "optimizer": optimizer.state_dict(),
                         "train_loss": train_loss,
