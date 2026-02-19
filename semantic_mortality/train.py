@@ -174,7 +174,7 @@ def train_and_checkpoint(config: Config, paths: RunPaths) -> None:
                 global_step += 1
 
                 if save_every_iters > 0 and global_step % save_every_iters == 0:
-                    ckpt_path = paths.checkpoints_dir / f"iter_{global_step}.pt"
+                    ckpt_path = paths.checkpoints_dir / f"epoch_{epoch}_iter_{global_step}.pt"
                     torch.save(
                         {
                             "epoch": epoch,
