@@ -15,7 +15,11 @@ class TallyRow:
     score: float
 
 
-def _parse_epoch(name: str) -> int | None:
+def _parse_iter(name: str) -> int | None:
+    """Extract global iteration from folder name like 'epoch_3_iter_1200'."""
+    match = re.search(r"iter[_-](\d+)", name)
+    if match:
+        return int(match.group(1))
     match = re.search(r"epoch[_-](\d+)", name)
     if match:
         return int(match.group(1))
@@ -39,14 +43,14 @@ def _read_tally_csv(path: Path) -> List[TallyRow]:
 
 
 def scan_dissection_dirs(dissection_root: Path) -> List[Tuple[int, Path]]:
-    epochs: Dict[int, Path] = {}
+    checkpoints: Dict[int, Path] = {}
     for child in dissection_root.iterdir():
         if not child.is_dir():
             continue
-        epoch = _parse_epoch(child.name)
-        if epoch is not None:
-            epochs[epoch] = child
-    return sorted(epochs.items(), key=lambda item: item[0])
+        step = _parse_iter(child.name)
+        if step is not None:
+            checkpoints[step] = child
+    return sorted(checkpoints.items(), key=lambda item: item[0])
 
 
 def build_trajectories(
@@ -59,22 +63,23 @@ def build_trajectories(
 
     with output_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
-            f, fieldnames=["epoch", "layer", "unit", "label", "score", "category"]
+            f, fieldnames=["step", "checkpoint", "layer", "unit", "label", "score", "category"]
         )
         writer.writeheader()
 
-        for epoch, epoch_dir in epochs:
+        for step, ckpt_dir in checkpoints:
             for layer in layers:
-                tally_path = epoch_dir / layer / "tally.csv"
+                tally_path = ckpt_dir / layer / "tally.csv"
                 if not tally_path.exists():
-                    tally_path = epoch_dir / "tally.csv"
+                    tally_path = ckpt_dir / "tally.csv"
                 if not tally_path.exists():
                     continue
                 rows = _read_tally_csv(tally_path)
                 for row in rows:
                     writer.writerow(
                         {
-                            "epoch": epoch,
+                            "step": step,
+                            "checkpoint": ckpt_dir.name,
                             "layer": layer,
                             "unit": row.unit,
                             "label": row.label,

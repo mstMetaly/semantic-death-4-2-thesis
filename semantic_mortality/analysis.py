@@ -9,7 +9,7 @@ from .mortality import MortalityEvent
 
 
 def write_summary(events: List[MortalityEvent], output_path: Path) -> None:
-    by_epoch = Counter(event.epoch_death for event in events)
+    by_step = Counter(event.step_death for event in events)
     by_layer = Counter(event.layer for event in events)
     by_concept = Counter(event.label for event in events)
     migrated = sum(1 for event in events if event.migrated)
@@ -23,8 +23,8 @@ def write_summary(events: List[MortalityEvent], output_path: Path) -> None:
         writer.writerow(["migrated_events", migrated])
         writer.writerow(["functional_dead_events", functional])
 
-        for epoch, count in sorted(by_epoch.items()):
-            writer.writerow([f"epoch_{epoch}_deaths", count])
+        for step, count in sorted(by_step.items()):
+            writer.writerow([f"step_{step}_deaths", count])
 
         for layer, count in sorted(by_layer.items()):
             writer.writerow([f"layer_{layer}_deaths", count])
@@ -47,8 +47,8 @@ def load_events(events_path: Path) -> List[MortalityEvent]:
                     unit=int(row["unit"]),
                     layer=row["layer"],
                     label=row["label"],
-                    epoch_birth=int(row["epoch_birth"]),
-                    epoch_death=int(row["epoch_death"]),
+                    step_birth=int(row["step_birth"]),
+                    step_death=int(row["step_death"]),
                     score_birth=float(row["score_birth"]),
                     score_death=float(row["score_death"]),
                     migrated=row["migrated"].lower() == "true",
@@ -58,8 +58,8 @@ def load_events(events_path: Path) -> List[MortalityEvent]:
     return events
 
 
-def mortality_counts_by_epoch(events: List[MortalityEvent]) -> Dict[int, int]:
+def mortality_counts_by_step(events: List[MortalityEvent]) -> Dict[int, int]:
     counts: Dict[int, int] = defaultdict(int)
     for event in events:
-        counts[event.epoch_death] += 1
+        counts[event.step_death] += 1
     return dict(sorted(counts.items()))

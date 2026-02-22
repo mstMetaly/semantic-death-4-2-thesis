@@ -19,8 +19,8 @@ class MortalityEvent:
     unit: int
     layer: str
     label: str
-    epoch_birth: int
-    epoch_death: int
+    step_birth: int
+    step_death: int
     score_birth: float
     score_death: float
     migrated: bool = False
@@ -35,7 +35,7 @@ def _load_trajectories(path: Path) -> Dict[Tuple[str, int], List[Dict[str, str]]
             key = (row["layer"], int(row["unit"]))
             series.setdefault(key, []).append(row)
     for key in series:
-        series[key].sort(key=lambda r: int(r["epoch"]))
+        series[key].sort(key=lambda r: int(r["step"]))
     return series
 
 
@@ -61,16 +61,16 @@ def detect_semantic_mortality(
     events: List[MortalityEvent] = []
 
     for (layer, unit), rows in series.items():
-        epochs = [int(r["epoch"]) for r in rows]
+        steps = [int(r["step"]) for r in rows]
         scores = [float(r["score"]) for r in rows]
         labels = [r["label"] for r in rows]
 
         scores = _smooth(scores, smoothing_window)
-        alive_epochs = [i for i, s in enumerate(scores) if s >= tau]
-        if len(alive_epochs) < min_alive_epochs:
+        alive_indices = [i for i, s in enumerate(scores) if s >= tau]
+        if len(alive_indices) < min_alive_epochs:
             continue
 
-        for idx in alive_epochs:
+        for idx in alive_indices:
             if idx + k >= len(scores):
                 continue
             window = scores[idx : idx + k + 1]
@@ -91,8 +91,8 @@ def detect_semantic_mortality(
                     unit=unit,
                     layer=layer,
                     label=labels[death_idx - 1],
-                    epoch_birth=epochs[idx],
-                    epoch_death=epochs[death_idx],
+                    step_birth=steps[idx],
+                    step_death=steps[death_idx],
                     score_birth=scores[idx],
                     score_death=scores[death_idx],
                 )
@@ -114,20 +114,20 @@ def detect_migration(
     for rows in series.values():
         for row in rows:
             concept_index.setdefault(row["label"], []).append(
-                (int(row["epoch"]), int(row["unit"]), float(row["score"]))
+                (int(row["step"]), int(row["unit"]), float(row["score"]))
             )
 
     for event in events:
         candidates = concept_index.get(event.label, [])
         before_scores = [
             score
-            for epoch, unit, score in candidates
-            if event.epoch_death - window <= epoch < event.epoch_death and score >= tau
+            for step, unit, score in candidates
+            if event.step_death - window <= step < event.step_death and score >= tau
         ]
         after_scores = [
             score
-            for epoch, unit, score in candidates
-            if event.epoch_death < epoch <= event.epoch_death + window and score >= tau
+            for step, unit, score in candidates
+            if event.step_death < step <= event.step_death + window and score >= tau
         ]
         before_avg = sum(before_scores) / max(len(before_scores), 1)
         after_avg = sum(after_scores) / max(len(after_scores), 1)
@@ -175,12 +175,26 @@ def compute_functional_death(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     thresholds = config.functional_death
 
+    ckpts = sorted(paths.checkpoints_dir.glob("epoch_*.pt"))
+    ckpt_steps = []
+    for c in ckpts:
+        import re as _re
+        m = _re.search(r"iter[_-](\d+)", c.stem)
+        step_val = int(m.group(1)) if m else int(c.stem.split("_")[-1])
+        ckpt_steps.append((step_val, c))
+    ckpt_steps.sort()
+
+    def _nearest_ckpt(target_step: int, direction: str) -> Path | None:
+        if direction == "before":
+            candidates = [(s, p) for s, p in ckpt_steps if s <= target_step]
+            return candidates[-1][1] if candidates else None
+        candidates = [(s, p) for s, p in ckpt_steps if s > target_step]
+        return candidates[0][1] if candidates else None
+
     for event in events:
-        before_epoch = max(event.epoch_birth, event.epoch_death - 1)
-        after_epoch = event.epoch_death + 1
-        before_path = paths.checkpoints_dir / f"epoch_{before_epoch}.pt"
-        after_path = paths.checkpoints_dir / f"epoch_{after_epoch}.pt"
-        if not before_path.exists() or not after_path.exists():
+        before_path = _nearest_ckpt(event.step_death, "before")
+        after_path = _nearest_ckpt(event.step_death, "after")
+        if before_path is None or after_path is None:
             continue
 
         def avg_conductance(checkpoint: Path) -> float:
@@ -218,8 +232,8 @@ def write_events(events: List[MortalityEvent], output_path: Path) -> None:
                 "unit",
                 "layer",
                 "label",
-                "epoch_birth",
-                "epoch_death",
+                "step_birth",
+                "step_death",
                 "score_birth",
                 "score_death",
                 "migrated",
@@ -233,8 +247,8 @@ def write_events(events: List[MortalityEvent], output_path: Path) -> None:
                     "unit": event.unit,
                     "layer": event.layer,
                     "label": event.label,
-                    "epoch_birth": event.epoch_birth,
-                    "epoch_death": event.epoch_death,
+                    "step_birth": event.step_birth,
+                    "step_death": event.step_death,
                     "score_birth": event.score_birth,
                     "score_death": event.score_death,
                     "migrated": event.migrated,

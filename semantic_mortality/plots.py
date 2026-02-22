@@ -5,22 +5,22 @@ from typing import Dict
 
 import matplotlib.pyplot as plt
 
-from .analysis import mortality_counts_by_epoch
+from .analysis import mortality_counts_by_step
 from .mortality import MortalityEvent
 
 
-def plot_mortality_by_epoch(events: list[MortalityEvent], output_path: Path, dpi: int) -> None:
-    counts = mortality_counts_by_epoch(events)
+def plot_mortality_by_step(events: list[MortalityEvent], output_path: Path, dpi: int) -> None:
+    counts = mortality_counts_by_step(events)
     if not counts:
         return
-    epochs = list(counts.keys())
-    values = [counts[e] for e in epochs]
+    steps = list(counts.keys())
+    values = [counts[s] for s in steps]
 
     plt.figure(figsize=(6, 4))
-    plt.plot(epochs, values, marker="o")
-    plt.xlabel("Epoch")
+    plt.plot(steps, values, marker="o")
+    plt.xlabel("Training Step")
     plt.ylabel("Deaths")
-    plt.title("Semantic Mortality by Epoch")
+    plt.title("Semantic Mortality by Training Step")
     plt.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output_path, dpi=dpi)
@@ -28,19 +28,19 @@ def plot_mortality_by_epoch(events: list[MortalityEvent], output_path: Path, dpi
 
 
 def plot_cumulative_mortality(events: list[MortalityEvent], output_path: Path, dpi: int) -> None:
-    counts = mortality_counts_by_epoch(events)
+    counts = mortality_counts_by_step(events)
     if not counts:
         return
-    epochs = list(counts.keys())
+    steps = list(counts.keys())
     cumulative = []
     total = 0
-    for epoch in epochs:
-        total += counts[epoch]
+    for step in steps:
+        total += counts[step]
         cumulative.append(total)
 
     plt.figure(figsize=(6, 4))
-    plt.plot(epochs, cumulative, marker="o")
-    plt.xlabel("Epoch")
+    plt.plot(steps, cumulative, marker="o")
+    plt.xlabel("Training Step")
     plt.ylabel("Cumulative Deaths")
     plt.title("Cumulative Semantic Mortality")
     plt.tight_layout()

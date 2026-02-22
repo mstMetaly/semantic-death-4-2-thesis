@@ -15,7 +15,7 @@ from .mortality import (
 from .netdissect_runner import run_netdissect_per_checkpoint
 from .plots import (
     plot_cumulative_mortality,
-    plot_mortality_by_epoch,
+    plot_mortality_by_step,
     plot_top_concepts,
 )
 from .train import train_and_checkpoint, _build_dataloaders
@@ -80,9 +80,9 @@ def run_plots(config: Config, paths_root: Path) -> None:
     events_path = paths.analysis_dir / "mortality_events.csv"
     events = load_events(events_path)
 
-    plot_mortality_by_epoch(
+    plot_mortality_by_step(
         events,
-        paths.plots_dir / "mortality_by_epoch.png",
+        paths.plots_dir / "mortality_by_step.png",
         dpi=config.plots["dpi"],
     )
     plot_cumulative_mortality(

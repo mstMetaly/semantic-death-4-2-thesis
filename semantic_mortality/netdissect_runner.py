@@ -10,15 +10,13 @@ from typing import Iterable
 from .config import Config, RunPaths
 
 
-def _checkpoint_epochs(checkpoints_dir: Path) -> list[int]:
-    epochs = []
-    for ckpt in checkpoints_dir.glob("epoch_*.pt"):
-        try:
-            epoch = int(ckpt.stem.split("_")[-1])
-        except ValueError:
-            continue
-        epochs.append(epoch)
-    return sorted(epochs)
+def _list_checkpoints(checkpoints_dir: Path) -> list[tuple[str, Path]]:
+    """Return sorted list of (label, path) for all checkpoints."""
+    results = []
+    for ckpt in sorted(checkpoints_dir.glob("epoch_*.pt")):
+        label = ckpt.stem  # e.g. "epoch_0_iter_300" or "epoch_0"
+        results.append((label, ckpt))
+    return results
 
 
 def _write_run_settings(
@@ -52,7 +50,7 @@ def _write_run_settings(
 def run_netdissect_per_checkpoint(
     config: Config,
     paths: RunPaths,
-    epochs: Iterable[int] | None = None,
+    checkpoint_labels: Iterable[str] | None = None,
 ) -> None:
     net_cfg = config.netdissect
     net_root = Path(net_cfg["root"]).expanduser()
@@ -60,14 +58,14 @@ def run_netdissect_per_checkpoint(
         net_root = (Path.cwd() / net_root).resolve()
 
     run_settings = net_root / "settings_run.py"
-    if epochs is None:
-        epochs = _checkpoint_epochs(paths.checkpoints_dir)
 
-    for epoch in epochs:
-        ckpt_path = paths.checkpoints_dir / f"epoch_{epoch}.pt"
-        if not ckpt_path.exists():
-            continue
-        output_dir = paths.dissection_dir / f"epoch_{epoch}"
+    all_ckpts = _list_checkpoints(paths.checkpoints_dir)
+    if checkpoint_labels is not None:
+        labels_set = set(checkpoint_labels)
+        all_ckpts = [(label, path) for label, path in all_ckpts if label in labels_set]
+
+    for label, ckpt_path in all_ckpts:
+        output_dir = paths.dissection_dir / label
         output_dir.mkdir(parents=True, exist_ok=True)
 
         broden_dir = net_root / "dataset" / "broden1_224"
@@ -79,7 +77,7 @@ def run_netdissect_per_checkpoint(
             data_directory=broden_dir,
             index_file="index.csv",
         )
-        print(f"Running NetDissect for epoch {epoch}")
+        print(f"Running NetDissect for {label}")
 
         python_exec = sys.executable
         code = (
