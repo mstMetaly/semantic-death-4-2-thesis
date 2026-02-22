@@ -104,7 +104,7 @@ def main() -> None:
     parser.add_argument(
         "--run-root",
         type=str,
-        default="runs",
+        default="runs_subset",
         help="Root directory for outputs",
     )
     parser.add_argument(
